@@ -1,30 +1,29 @@
 // This script will be run within the webview itself
 import { randomName } from '../common/names';
 import {
-    PetSize,
+    ColorThemeKind,
     PetColor,
+    PetSize,
     PetType,
     Theme,
-    ColorThemeKind,
     WebviewMessage,
 } from '../common/types';
-import { IPetType } from './states';
-import {
-    createPet,
-    PetCollection,
-    PetElement,
-    IPetCollection,
-    availableColors,
-    InvalidPetException,
-} from './pets';
-import { PetElementState, PetPanelState } from './states';
-import { THEMES } from './themes';
 import {
     dynamicThrowOff,
     dynamicThrowOn,
     setupBallThrowing,
     throwAndChase,
 } from './ball';
+import {
+    availableColors,
+    createPet,
+    InvalidPetException,
+    IPetCollection,
+    PetCollection,
+    PetElement,
+} from './pets';
+import { IPetType, PetElementState, PetPanelState } from './states';
+import { THEMES } from './themes';
 
 const FOREGROUND_EFFECT_CANVAS_ID = 'foregroundEffectCanvas';
 const BACKGROUND_EFFECT_CANVAS_ID = 'backgroundEffectCanvas';
@@ -238,14 +237,19 @@ function initCanvas(name: string): HTMLCanvasElement | null {
     return canvas;
 }
 
+type PetSpecification = {
+    color: PetColor;
+    type: PetType;
+    size: PetSize;
+    name: string;
+};
+
 // It cannot access the main VS Code APIs directly.
 export function petPanelApp(
     basePetUri: string,
     theme: Theme,
     themeKind: ColorThemeKind,
-    petColor: PetColor,
-    petSize: PetSize,
-    petType: PetType,
+    specs: PetSpecification[],
     throwBallWithMouse: boolean,
     disableEffects: boolean,
     stateApi?: VscodeStateApi,
@@ -257,6 +261,9 @@ export function petPanelApp(
     // Apply Theme backgrounds
     const foregroundEl = document.getElementById('foreground');
     const backgroundEl = document.getElementById('background');
+
+    const petSize = specs.length > 0 ? specs[0].size : PetSize.medium;
+
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     backgroundEl!.style.backgroundImage = themeInfo.backgroundImageUrl(
         basePetUri,
@@ -273,9 +280,8 @@ export function petPanelApp(
 
     console.log(
         'Starting pet session',
-        petColor,
+        specs,
         basePetUri,
-        petType,
         throwBallWithMouse,
         theme,
     );
@@ -284,18 +290,20 @@ export function petPanelApp(
     var state = stateApi?.getState();
     if (!state) {
         console.log('No state, starting a new session.');
-        petCounter = 1;
-        allPets.push(
-            addPetToPanel(
-                petType,
-                basePetUri,
-                petColor,
-                petSize,
-                randomStartPosition(),
-                floor,
-                floor,
-                randomName(petType),
-                stateApi,
+        petCounter = specs.length;
+        specs.forEach(({ type, color, size, name }) =>
+            allPets.push(
+                addPetToPanel(
+                    type,
+                    basePetUri,
+                    color,
+                    size,
+                    randomStartPosition(),
+                    floor,
+                    floor,
+                    name,
+                    stateApi,
+                ),
             ),
         );
         saveState(stateApi);
